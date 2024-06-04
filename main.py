@@ -10,7 +10,7 @@ from decouple import config
 import openai
 
 #Custom function imports
-from functions.openai_requests import convert_audio_to_text
+from functions.openai_requests import convert_audio_to_text, get_chat_response
 
 #initialize app
 app = FastAPI()
@@ -42,12 +42,17 @@ def read_root():
 @app.get("/post-audio-get/")
 async def get_audio():
     #get saved audio
-    audio_input=open("voice.mp3","rb")
+    audio_input=open("guillem.mp3","rb")
     
     #decode audio
     message_decoded=convert_audio_to_text(audio_input)
-    print(message_decoded)
+    #Guard
+    if not message_decoded:
+        return HTTPException(status_code=400,detail="Failed to decode Audio")
     
+    #get chatgpt response
+    chat_response=get_chat_response(message_decoded)
+    print(chat_response)
     return "done"
 
 #post not response
@@ -56,3 +61,4 @@ async def get_audio():
 @app.post("/post-audio")
 async def post_audio(file: UploadFile = File(...)):
     print("hello "+str(file))
+    
