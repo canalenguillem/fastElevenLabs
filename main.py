@@ -10,7 +10,7 @@ from decouple import config
 import openai
 
 #Custom function imports
-from functions.openai_requests import convert_audio_to_text, get_chat_response
+from functions.openai_requests import convert_audio_to_text, get_chat_response,store_messages,reset_messages
 
 #initialize app
 app = FastAPI()
@@ -38,6 +38,12 @@ app.add_middleware(
 def read_root():
     return {"message": "healthy"}
 
+#check health
+@app.get("/reset")
+def read_conversation():
+    reset_messages()
+    return {"message": "reseted file"}
+
 
 @app.get("/post-audio-get/")
 async def get_audio():
@@ -52,7 +58,7 @@ async def get_audio():
     
     #get chatgpt response
     chat_response=get_chat_response(message_decoded)
-    print(chat_response)
+    store_messages(message_decoded,chat_response)
     return "done"
 
 #post not response

@@ -1,6 +1,8 @@
 import openai
 from decouple import config
 from functions.database import get_recent_messages
+import json
+
 
 
 #retrieve environtment variables
@@ -38,6 +40,27 @@ def get_chat_response(message_input):
         print(e)
         return
     
-def store_messages():
-    pass
+def store_messages(request_message,response_message):
+    #define de file name
+    file_name="stored_data.json"
+    
+    #get recent messages
+    messages=get_recent_messages()[1:]
+    
+    #add messages to data
+    user_message={"role":"user","content":request_message}
+    assistant_message={"role":"assistant","content":response_message}
+    messages.append(user_message)
+    messages.append(assistant_message)
+    
+    #save the updated file
+    with open(file_name,"w") as f:
+        json.dump(messages,f)
+        
+def reset_messages():
+    #overwrite
+    print("overwriting")
+    open("stored_data.json","w")
+    
+    
         
