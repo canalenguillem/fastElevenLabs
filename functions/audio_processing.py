@@ -72,3 +72,19 @@ def convert_wav_to_mp3(wav_file_path: str) -> str:
         if os.path.exists(wav_file_path):
             os.remove(wav_file_path)
         raise Exception(f"Failed to convert file: {e}")
+    
+def delete_mp3_file(filename: str):
+    """
+    Deletes an MP3 file and removes its hash from the set.
+
+    :param filename: Name of the MP3 file to delete
+    """
+    file_path = os.path.join(MP3_FOLDER, filename)
+    if os.path.exists(file_path):
+        file_hash = compute_file_hash(file_path)
+        if file_hash in HASH_SET:
+            HASH_SET.remove(file_hash)
+            save_hashes()
+        os.remove(file_path)
+    else:
+        raise FileNotFoundError(f"File {filename} not found")

@@ -13,7 +13,7 @@ from pydub import AudioSegment
 from functions.openai_requests import convert_audio_to_text, get_chat_response, store_messages, reset_messages
 from functions.text_to_speech import convert_text_to_speech
 
-from functions.audio_processing import convert_wav_to_mp3,MP3_FOLDER
+from functions.audio_processing import convert_wav_to_mp3,MP3_FOLDER,delete_mp3_file
 
 # Initialize app
 app = FastAPI()
@@ -25,7 +25,7 @@ origins = [
     "http://localhost:4173",
     "http://localhost:4174",
     "http://localhost:3000",
-    "http://127.0.0.1:5502",
+    "http://127.0.0.1:5503",
 ]
 
 # CORS middleware
@@ -118,7 +118,19 @@ async def upload_wav(file: UploadFile = File(...)):
 async def list_mp3s():
     try:
         files = [f for f in os.listdir(MP3_FOLDER) if os.path.isfile(os.path.join(MP3_FOLDER, f))]
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(MP3_FOLDER, x)), reverse=True)
         return JSONResponse(content={"mp3_files": files})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# Endpoint to delete an MP3 file
+@app.delete("/mp3/{filename}")
+async def delete_mp3(filename: str):
+    try:
+        delete_mp3_file(filename)
+        return JSONResponse(content={"message": f"File {filename} deleted successfully"})
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -131,4 +143,21 @@ async def get_mp3(filename: str):
         return FileResponse(path=file_path, media_type='audio/mpeg', filename=filename)
     else:
         raise HTTPException(status_code=404, detail="File not found")
+    
+    
+# Endpoint to convert an MP3 file to text
+@app.get("/mp3-to-text/{filename}")
+async def mp3_to_text(filename: str):
+    file_path = os.path.join(MP3_FOLDER, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        with open(file_path, "rb") as audio_input:
+            message_decoded = convert_audio_to_text(audio_input)
+            if not message_decoded:
+                raise HTTPException(status_code=400, detail="Failed to decode audio")
+        return JSONResponse(content={"message": "Audio converted to text", "text": message_decoded})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
