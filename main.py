@@ -2,7 +2,7 @@ from typing import Union
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse,FileResponse
 from decouple import config
 import openai
 import shutil
@@ -13,7 +13,7 @@ from pydub import AudioSegment
 from functions.openai_requests import convert_audio_to_text, get_chat_response, store_messages, reset_messages
 from functions.text_to_speech import convert_text_to_speech
 
-from functions.audio_processing import convert_wav_to_mp3
+from functions.audio_processing import convert_wav_to_mp3,MP3_FOLDER
 
 # Initialize app
 app = FastAPI()
@@ -25,6 +25,7 @@ origins = [
     "http://localhost:4173",
     "http://localhost:4174",
     "http://localhost:3000",
+    "http://127.0.0.1:5502",
 ]
 
 # CORS middleware
@@ -110,4 +111,24 @@ async def upload_wav(file: UploadFile = File(...)):
         return JSONResponse(content={"message": "File converted successfully", "mp3_file_path": mp3_file_path})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+# Endpoint to list all MP3 files
+@app.get("/list-mp3s/")
+async def list_mp3s():
+    try:
+        files = [f for f in os.listdir(MP3_FOLDER) if os.path.isfile(os.path.join(MP3_FOLDER, f))]
+        return JSONResponse(content={"mp3_files": files})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+# Endpoint to serve an MP3 file
+@app.get("/mp3/{filename}")
+async def get_mp3(filename: str):
+    file_path = os.path.join(MP3_FOLDER, filename)
+    if os.path.exists(file_path):
+        return FileResponse(path=file_path, media_type='audio/mpeg', filename=filename)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
 
